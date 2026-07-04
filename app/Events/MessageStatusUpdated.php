@@ -12,13 +12,10 @@ class MessageStatusUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    /**
-     * @param int[] $messageIds
-     */
     public function __construct(
         public int $conversationId,
         public array $messageIds,
-        public string $status // 'delivered' | 'read'
+        public string $status 
     ) {
         //
     }
