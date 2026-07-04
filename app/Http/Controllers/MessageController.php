@@ -12,12 +12,10 @@ use Illuminate\Support\Facades\Auth;
 
 class MessageController extends Controller
 {
-    // Ambil history pesan di sebuah conversation
     public function index(Conversation $conversation)
     {
         $user = Auth::user();
 
-        // Pastikan user adalah member conversation ini
         abort_unless(
             $conversation->participants()->where('user_id', $user->id)->exists(),
             403, 'Anda bukan anggota percakapan ini.'
@@ -30,7 +28,6 @@ class MessageController extends Controller
             ->get()
             ->map(fn ($msg) => $this->formatMessage($msg, $user));
 
-        // Update last_read_at untuk user ini
         $conversation->participants()->updateExistingPivot($user->id, [
             'last_read_at' => now(),
         ]);
@@ -38,7 +35,6 @@ class MessageController extends Controller
         return response()->json($messages);
     }
 
-    // Kirim pesan baru (teks dan/atau gambar)
     public function store(Request $request, Conversation $conversation)
     {
         $user = Auth::user();
@@ -50,7 +46,7 @@ class MessageController extends Controller
 
         $request->validate([
             'body'       => 'nullable|string|max:5000',
-            'image'      => 'nullable|image|max:5120', // max 5MB
+            'image'      => 'nullable|image|max:5120',
             'parent_id'  => 'nullable|exists:messages,id',
         ]);
 
@@ -62,7 +58,6 @@ class MessageController extends Controller
         $type = 'text';
 
         if ($request->hasFile('image')) {
-            // Disimpan di storage/app/public/chat-images, diakses lewat /storage/chat-images/...
             $mediaPath = $request->file('image')->store('chat-images', 'public');
             $type = 'image';
         }
@@ -79,30 +74,26 @@ class MessageController extends Controller
 
         $message->load(['sender', 'parent.sender']);
 
-        // Update waktu conversation (agar muncul di atas list)
         $conversation->touch();
 
-        // Broadcast ke semua user di conversation ini via WebSocket
         broadcast(new MessageSent($message))->toOthers();
 
         return response()->json($this->formatMessage($message, $user, true));
     }
 
-    // Hapus pesan (soft delete, cuma pengirim yang boleh hapus)
     public function destroy(Message $message)
     {
         $user = Auth::user();
 
         abort_unless($message->user_id === $user->id, 403, 'Kamu hanya bisa menghapus pesanmu sendiri.');
 
-        $message->delete(); // soft delete
+        $message->delete();
 
         broadcast(new MessageDeleted($message))->toOthers();
 
         return response()->json(['status' => 'deleted', 'id' => $message->id]);
     }
 
-    // Tandai semua pesan di conversation ini (yang bukan milik sendiri) sebagai "delivered"
     public function markDelivered(Conversation $conversation)
     {
         $user = Auth::user();
@@ -120,7 +111,6 @@ class MessageController extends Controller
         return response()->json(['status' => 'ok']);
     }
 
-    // Tandai semua pesan di conversation ini (yang bukan milik sendiri) sebagai "read"
     public function markRead(Conversation $conversation)
     {
         $user = Auth::user();
@@ -140,7 +130,6 @@ class MessageController extends Controller
         return response()->json(['status' => 'ok']);
     }
 
-    // Helper: format 1 message jadi array response yang konsisten dipakai index() & store()
     private function formatMessage(Message $msg, $user, bool $isMine = null): array
     {
         return [
