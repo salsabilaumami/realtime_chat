@@ -20,16 +20,12 @@ class MessageSent implements ShouldBroadcastNow
         //
     }
 
-    // Channel mana yang akan menerima event ini
-    // Private channel: hanya member conversation yang bisa dengar
     public function broadcastOn(): array
     {
         return [
             new PrivateChannel('conversation.' . $this->message->conversation_id),
         ];
     }
-
-    // Data apa yang dikirim ke browser
     public function broadcastWith(): array
     {
         return [
