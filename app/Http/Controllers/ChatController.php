@@ -10,12 +10,10 @@ use Illuminate\Support\Facades\Auth;
 
 class ChatController extends Controller
 {
-    // Halaman utama chat
     public function index(Request $request)
     {
         $user = Auth::user();
 
-        // Ambil semua conversation milik user, beserta pesan terakhir
         $conversations = $user->conversations()
             ->with(['participants', 'lastMessage.sender'])
             ->get()
@@ -36,7 +34,6 @@ class ChatController extends Controller
                 ];
             });
 
-        // Semua user lain (untuk mulai private chat baru)
         $users = User::where('id', '!=', $user->id)
             ->select('id', 'name', 'is_online', 'last_seen')
             ->get()
